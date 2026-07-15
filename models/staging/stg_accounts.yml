@@ -1,0 +1,37 @@
+models:
+  - name: stg_accounts
+    description: >
+      One row per account, deduplicated to the most recent version.
+      Attributes here reflect the account's state at reference_data
+      generation time — NOT live status/balance (see CORE.ACCOUNTS_CURRENT
+      for that, joined in later intermediate models).
+    columns:
+      - name: account_id
+        description: Primary key — unique identifier for the account
+        tests:
+          - unique
+          - not_null
+
+      - name: customer_id
+        description: Foreign key to stg_customers
+        tests:
+          - not_null
+
+      - name: account_type
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['CHECKING', 'SAVINGS', 'CREDIT']
+
+      - name: account_status_at_creation
+        tests:
+          - accepted_values:
+              values: ['OPEN', 'FROZEN', 'CLOSED']
+
+      - name: currency
+        tests:
+          - accepted_values:
+              values: ['USD']
+
+      - name: balance_at_creation
+        description: Snapshot balance at generation time, not the live balance

@@ -2,6 +2,7 @@ with source as (
     select * from {{ source('raw','accounts_api_raw') }}
 ),
 
+--as we have a nested json file we need to flatten them into indisviual records 
 flattened as (
     select
         f.value:account_id::string            as account_id,
