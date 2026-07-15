@@ -1,0 +1,10 @@
+banking-analytics-platform-aws-snowflake:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      role: FINTECH_TRANSFORMER
+      warehouse: DBT_WH
+      database: FINTECH_PROD
+      schema: STAGING
+      threads: 8

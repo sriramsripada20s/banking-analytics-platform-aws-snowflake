@@ -1,0 +1,19 @@
+name: banking_analytics_platform_aws_snowflake
+version: 1.0.0
+config-version: 2
+profile: banking-analytics-platform-aws-snowflake
+model-paths:
+  - models
+analysis-paths:
+  - analyses
+test-paths:
+  - tests
+seed-paths:
+  - seeds
+macro-paths:
+  - macros
+snapshot-paths:
+  - snapshots
+models:
+  banking-analytics-platform-aws-snowflake:
+    +materialized: view

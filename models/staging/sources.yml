@@ -1,0 +1,36 @@
+version: 2
+
+sources:
+  - name: raw
+    database: FINTECH_PROD
+    schema: RAW
+    description: >
+      Untouched, as-loaded data from all ingestion pipelines (AWS Lambda,
+      Snowpipe, batch COPY INTO). No business logic applied here.
+    tables:
+      - name: settlements
+      - name: partner_transactions
+        loaded_at_field: _loaded_at
+        freshness:
+          warn_after: {count: 12, period: hour}
+          error_after: {count: 48, period: hour}
+      - name: customers_api_raw
+      - name: accounts_api_raw
+      - name: merchants_api_raw
+      - name: support_cases
+      - name: policy_documents
+      - name: external_exchange_rates
+      - name: account_activity
+        loaded_at_field: _loaded_at
+        freshness:
+          warn_after: {count: 3, period: day}
+          error_after: {count: 7, period: day}
+
+  - name: core
+    database: FINTECH_PROD
+    schema: CORE
+    description: >
+      As the accounts_current table is maintained by Stream + Tasks which involves updates/merges based on business logic we are no longer includding this table in the RAW Schema, hence we placed this table in CORE Schema. 
+      Upsert-by-account_id, "keep only the latest known state".
+    tables:
+      - name: accounts_current
