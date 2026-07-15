@@ -1,0 +1,30 @@
+version: 2
+
+models:
+  - name: stg_accounts_current
+    description: >
+      Live account state, sourced from CORE.ACCOUNTS_CURRENT — maintained
+      OUTSIDE dbt by the Stream+Task MERGE pipeline (see account_activity
+      ingestion). This is the authoritative source for current
+      status/balance; stg_accounts only has creation-time snapshots.
+    columns:
+      - name: account_id
+        description: Primary key
+        tests:
+          - unique
+          - not_null
+
+      - name: account_status
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['OPEN', 'FROZEN', 'CLOSED']
+
+      - name: current_balance
+        tests:
+          - not_null
+
+      - name: currency
+        tests:
+          - accepted_values:
+              values: ['USD']
