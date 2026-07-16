@@ -1,0 +1,24 @@
+version: 2
+
+models:
+  - name: stg_exchange_rates
+    description: >
+      One row per (base_currency, quote_currency, rate_date) combination.
+      Source data is genuinely external/real (a live public API), unlike
+      every other source in this project, which is synthetic.
+    columns:
+      - name: base_currency
+        tests:
+          - not_null
+
+      - name: quote_currency
+        tests:
+          - not_null
+
+      - name: exchange_rate
+        tests:
+          - not_null
+
+      - name: rate_date
+        tests:
+          - not_null

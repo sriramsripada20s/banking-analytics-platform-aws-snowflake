@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: stg_account_activity
+    description: >
+      Full historical log of every account activity event — every
+      status/balance change ever generated, never overwritten. This is
+      what makes point-in-time history possible; CORE.ACCOUNTS_CURRENT
+      (via stg_accounts_current) only ever shows the latest state.
+    columns:
+      - name: account_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_accounts')
+              field: account_id
+
+      - name: account_status
+        tests:
+          - accepted_values:
+              values: ['OPEN', 'FROZEN', 'CLOSED']
+
+      - name: activity_timestamp
+        tests:
+          - not_null
