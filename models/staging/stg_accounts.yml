@@ -16,6 +16,10 @@ models:
         description: Foreign key to stg_customers
         tests:
           - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+
 
       - name: account_type
         tests:
@@ -35,3 +39,5 @@ models:
 
       - name: balance_at_creation
         description: Snapshot balance at generation time, not the live balance
+
+      

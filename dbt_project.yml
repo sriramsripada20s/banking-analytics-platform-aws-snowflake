@@ -15,5 +15,13 @@ macro-paths:
 snapshot-paths:
   - snapshots
 models:
-  banking-analytics-platform-aws-snowflake:
+  banking_analytics_platform_aws_snowflake:
     +materialized: view
+    staging:
+      +schema: staging
+    intermediate:
+      +schema: intermediate
+    core:
+      +schema: core
+    marts:
+      +schema: marts
