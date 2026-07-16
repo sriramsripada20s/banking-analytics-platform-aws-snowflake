@@ -1,0 +1,11 @@
+version: 2
+
+models:
+  - name: mart_merchant_performance
+    description: >
+      Merchant performance/risk view for BI and Cortex Analyst.
+    columns:
+      - name: merchant_id
+        tests:
+          - unique
+          - not_null

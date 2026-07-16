@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: mart_customer_360
+    description: >
+      Customer 360 view for BI and Cortex Analyst — one row per customer,
+      combining identity, account, transaction, and support signals.
+      Answers: "which customers are becoming inactive," "balance trend
+      by segment," "support issues correlated with churn."
+    columns:
+      - name: customer_id
+        tests:
+          - unique
+          - not_null

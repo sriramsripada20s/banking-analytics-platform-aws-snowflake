@@ -1,0 +1,13 @@
+version: 2
+
+models:
+  - name: mart_daily_transaction_kpi
+    description: >
+      One row per date — daily transaction volume, value, and decline
+      rate. Answers "what's our daily transaction volume and value?"
+      and "why did payment failures increase yesterday?" directly.
+    columns:
+      - name: transaction_date
+        tests:
+          - unique
+          - not_null
