@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: stg_support_cases
+    description: >
+      One row per customer support case. Contains unstructured narrative
+      text (feeds Cortex Search later) alongside structured fields for
+      standard analytics.
+    columns:
+      - name: case_id
+        tests:
+          - unique
+          - not_null
+
+      - name: customer_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+
+      - name: category
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['CARD_DECLINE', 'UNAUTHORIZED_TRANSACTION', 'FEE_INQUIRY', 'ACCOUNT_ACCESS', 'PAYMENT_FAILURE', 'ACCOUNT_CLOSURE']
+
+      - name: priority
+        tests:
+          - accepted_values:
+              values: ['LOW', 'MEDIUM', 'HIGH']
+
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['OPEN', 'RESOLVED', 'ESCALATED']
+
+      - name: narrative
+        tests:
+          - not_null
