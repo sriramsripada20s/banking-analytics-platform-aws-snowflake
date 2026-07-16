@@ -1,0 +1,37 @@
+version: 2
+
+models:
+  - name: stg_partner_transactions
+    description: >
+      One row per card authorization event, loaded via Snowpipe
+      (near real-time). Event/fact table — no dedup by natural key.
+    columns:
+      - name: event_id
+        tests:
+          - unique
+          - not_null
+
+      - name: account_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_accounts')
+              field: account_id
+
+      - name: merchant_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_merchants')
+              field: merchant_id
+
+      - name: authorization_status
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['APPROVED', 'DECLINED', 'PENDING']
+
+      - name: channel
+        tests:
+          - accepted_values:
+              values: ['ONLINE', 'IN_STORE', 'MOBILE_APP', 'ATM']
