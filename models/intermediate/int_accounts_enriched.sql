@@ -1,3 +1,25 @@
+/* ================================================================
+   int_accounts_enriched
+   GRAIN: one row per account_id (every account, active or not)
+
+   ANSWERS:
+   - What's an account's true current status/balance?  -> combines
+     static attributes with live state in one place
+   - Foundation for account-level features in downstream models
+
+   INPUTS:
+   - stg_accounts         -> static attributes (type, customer_id,
+                              currency, created_at)
+   - stg_accounts_current -> live status/balance, maintained OUTSIDE
+                              dbt by the Stream+Task MERGE pipeline
+
+   JOINS: LEFT, accounts as anchor. An account with no activity yet
+   (never touched by account_activity) is still a real account and
+   must still appear — falls back to creation-time snapshot via
+   COALESCE rather than being dropped. has_activity_history flags
+   which case applies.
+   ================================================================ */
+
 with accounts as (
     select * from {{ ref('stg_accounts') }}
 ),

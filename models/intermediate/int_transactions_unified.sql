@@ -1,3 +1,26 @@
+/* ================================================================
+   int_transactions_unified
+   GRAIN: one row per transaction (settlements + partner events combined)
+
+   ANSWERS:
+   - What's our daily transaction volume/value?  -> transaction_date,
+     amount, status
+   - Foundation for all downstream fraud/decline/customer features
+
+   INPUTS:
+   - stg_settlements            -> nightly batch transactions
+   - stg_partner_transactions   -> real-time card authorization events
+
+   JOINS: none — this is a UNION ALL of two same-grain sources, not a
+   join. transaction_source distinguishes origin; ingestion_channel
+   shows how the pipeline loaded it; transaction_channel is the
+   customer-facing channel (partner events only, null for settlements).
+
+   FEATURES BUILT HERE (not left for later models to recompute):
+   time-based (is_weekend, is_late_night), amount_bucket, and outcome
+   flags (is_declined_or_failed, is_successful) — every downstream
+   model that aggregates transactions reuses these instead of
+   ================================================================ */
 
 with settlements as (
     select

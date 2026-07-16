@@ -1,0 +1,20 @@
+version: 2
+
+models:
+  - name: int_merchant_risk_summary
+    description: >
+      One row per merchant, with transaction volume and decline-rate
+      features. is_high_decline_merchant requires a minimum 20-transaction
+      sample to avoid flagging low-volume merchants on statistical noise.
+    columns:
+      - name: merchant_id
+        tests:
+          - unique
+          - not_null
+      - name: risk_category
+        tests:
+          - accepted_values:
+              values: ['LOW', 'MEDIUM', 'HIGH']
+      - name: is_high_decline_merchant
+        tests:
+          - not_null
