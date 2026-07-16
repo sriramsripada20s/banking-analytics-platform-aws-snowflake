@@ -1,0 +1,45 @@
+version: 2
+
+models:
+  - name: int_transactions_unified
+    description: >
+      One row per transaction, combining batch settlements and real-time
+      partner events into a single consistent shape. transaction_source
+      identifies the origin table; ingestion_channel identifies how the
+      pipeline loaded it; transaction_channel is the customer-facing
+      channel (only populated for partner events). Includes derived
+      time-based and outcome features for downstream ML/aggregation.
+    columns:
+      - name: transaction_id
+        tests:
+          - unique
+          - not_null
+
+      - name: account_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_accounts')
+              field: account_id
+
+      - name: merchant_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_merchants')
+              field: merchant_id
+
+      - name: transaction_source
+        tests:
+          - accepted_values:
+              values: ['SETTLEMENT', 'PARTNER_EVENT']
+
+      - name: ingestion_channel
+        tests:
+          - accepted_values:
+              values: ['BATCH', 'SNOWPIPE_REALTIME']
+
+      - name: amount_bucket
+        tests:
+          - accepted_values:
+              values: ['MICRO', 'SMALL', 'MEDIUM', 'LARGE']
