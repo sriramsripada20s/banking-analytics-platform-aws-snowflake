@@ -21,7 +21,9 @@ models:
       +schema: staging
     intermediate:
       +schema: intermediate
+      +materialized: table
     core:
       +schema: core
     marts:
       +schema: marts
+      +materialized: table
