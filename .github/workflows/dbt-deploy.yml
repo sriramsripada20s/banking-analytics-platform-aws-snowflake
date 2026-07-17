@@ -16,13 +16,11 @@ jobs:
     env:
       SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
       SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-      # We use SNOWFLAKE_PRIVATE_KEY for the Base64 encoded key
       SNOWFLAKE_PRIVATE_KEY: ${{ secrets.SNOWFLAKE_PRIVATE_KEY }}
       SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_DATABASE }}
       SNOWFLAKE_SCHEMA: ${{ vars.SNOWFLAKE_SCHEMA }}
       SNOWFLAKE_WAREHOUSE: ${{ vars.SNOWFLAKE_WAREHOUSE }}
       SNOWFLAKE_ROLE: ${{ vars.SNOWFLAKE_ROLE }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,28 +36,27 @@ jobs:
       - name: Decrypt private key for CLI use
         id: keyfile
         run: |
-          # This script decodes the Base64 secret into a raw .p8 file
           KEY_PATH=$(python orchestration/scripts/decrypt_key_for_cli.py)
           echo "path=$KEY_PATH" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy dbt project files to Snowflake
-        env:
-          # Force the CLI to use these direct environment variables
-          SNOWFLAKE_AUTHENTICATOR: SNOWFLAKE_JWT
-          SNOWFLAKE_PRIVATE_KEY_PATH: ${{ steps.keyfile.outputs.path }}
-          # Explicitly set host to prevent 404 routing errors
-          SNOWFLAKE_HOST: ${{ secrets.SNOWFLAKE_ACCOUNT }}.snowflakecomputing.com
+      - name: Configure Snowflake CLI connection
         run: |
-          snow dbt deploy banking_analytics_platform_aws_snowflake \
+          snow connection add \
+            --connection-name ci \
             --account "$SNOWFLAKE_ACCOUNT" \
             --user "$SNOWFLAKE_USER" \
             --role "$SNOWFLAKE_ROLE" \
             --warehouse "$SNOWFLAKE_WAREHOUSE" \
             --database "$SNOWFLAKE_DATABASE" \
-            --schema "$SNOWFLAKE_SCHEMA"
+            --schema "$SNOWFLAKE_SCHEMA" \
+            --authenticator SNOWFLAKE_JWT \
+            --private-key-file "${{ steps.keyfile.outputs.path }}" \
+            --no-interactive
+
+      - name: Deploy dbt project files to Snowflake
+        run: snow dbt deploy banking_analytics_platform_aws_snowflake --connection ci
 
       - name: Deploy task orchestration DAG
-        # Note: Ensure this script also uses the env vars above if it connects to Snowflake
         run: |
           python orchestration/scripts/deploy_dbt_tasks.py \
             orchestration/dbt_task_config.json \
