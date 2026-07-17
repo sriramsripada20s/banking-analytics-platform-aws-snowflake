@@ -51,6 +51,7 @@ jobs:
             --warehouse "$SNOWFLAKE_WAREHOUSE" \
             --database "$SNOWFLAKE_DATABASE" \
             --schema "$SNOWFLAKE_SCHEMA" \
+            --authenticator SNOWFLAKE_JWT \
             --private-key-path "${{ steps.keyfile.outputs.path }}" \
             --no-interactive
 
