@@ -2,22 +2,19 @@
 Deploys orchestration/dbt_task_config.json to Snowflake by calling the
 DEPLOY_DBT_TASK_DAG stored procedure.
 """
+import base64
 import json
 import os
 import sys
 
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.backends import default_backend
 import snowflake.connector
 
 
 def load_private_key():
-    pem_data = os.environ["SNOWFLAKE_PRIVATE_KEY"].encode()
-    passphrase = os.environ["SNOWFLAKE_PRIVATE_KEY_PASSPHRASE"].encode()
-
-    private_key = serialization.load_pem_private_key(
-        pem_data, password=passphrase, backend=default_backend()
-    )
+    b64_key = os.environ["SNOWFLAKE_PRIVATE_KEY"].strip()
+    pem_bytes = base64.b64decode(b64_key)
+    private_key = serialization.load_pem_private_key(pem_bytes, password=None)
     return private_key.private_bytes(
         encoding=serialization.Encoding.DER,
         format=serialization.PrivateFormat.PKCS8,
