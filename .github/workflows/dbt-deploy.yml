@@ -1,6 +1,7 @@
 name: Deploy dbt Pipeline to Snowflake
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
