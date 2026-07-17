@@ -1,4 +1,4 @@
-name: Deploy dbt Pipelinee to Snowflakeee
+name: Deploy dbt Pipeline to Snowflake
 
 on:
   workflow_dispatch:
@@ -16,8 +16,8 @@ jobs:
     env:
       SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
       SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      # We use SNOWFLAKE_PRIVATE_KEY for the Base64 encoded key
       SNOWFLAKE_PRIVATE_KEY: ${{ secrets.SNOWFLAKE_PRIVATE_KEY }}
-      SNOWFLAKE_PRIVATE_KEY_PASSPHRASE: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_PASSPHRASE }}
       SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_DATABASE }}
       SNOWFLAKE_SCHEMA: ${{ vars.SNOWFLAKE_SCHEMA }}
       SNOWFLAKE_WAREHOUSE: ${{ vars.SNOWFLAKE_WAREHOUSE }}
@@ -38,32 +38,28 @@ jobs:
       - name: Decrypt private key for CLI use
         id: keyfile
         run: |
+          # This script decodes the Base64 secret into a raw .p8 file
           KEY_PATH=$(python orchestration/scripts/decrypt_key_for_cli.py)
           echo "path=$KEY_PATH" >> "$GITHUB_OUTPUT"
 
-      - name: Configure Snowflake CLI connection
+      - name: Deploy dbt project files to Snowflake
+        env:
+          # Force the CLI to use these direct environment variables
+          SNOWFLAKE_AUTHENTICATOR: SNOWFLAKE_JWT
+          SNOWFLAKE_PRIVATE_KEY_PATH: ${{ steps.keyfile.outputs.path }}
+          # Explicitly set host to prevent 404 routing errors
+          SNOWFLAKE_HOST: ${{ secrets.SNOWFLAKE_ACCOUNT }}.snowflakecomputing.com
         run: |
-          # Remove existing connection to prevent cache conflicts
-          snow connection remove ci || true
-          
-          snow connection add \
-            --connection-name ci \
+          snow dbt deploy banking_analytics_platform_aws_snowflake \
             --account "$SNOWFLAKE_ACCOUNT" \
-            --host "$SNOWFLAKE_ACCOUNT.snowflakecomputing.com" \
             --user "$SNOWFLAKE_USER" \
             --role "$SNOWFLAKE_ROLE" \
             --warehouse "$SNOWFLAKE_WAREHOUSE" \
             --database "$SNOWFLAKE_DATABASE" \
-            --schema "$SNOWFLAKE_SCHEMA" \
-            --authenticator SNOWFLAKE_JWT \
-            --private-key-path "${{ steps.keyfile.outputs.path }}" \
-            --no-interactive
-
-      - name: Deploy dbt project files to Snowflake
-        # Added the project name argument here
-        run: snow dbt deploy banking_analytics_platform_aws_snowflake --connection ci
+            --schema "$SNOWFLAKE_SCHEMA"
 
       - name: Deploy task orchestration DAG
+        # Note: Ensure this script also uses the env vars above if it connects to Snowflake
         run: |
           python orchestration/scripts/deploy_dbt_tasks.py \
             orchestration/dbt_task_config.json \
