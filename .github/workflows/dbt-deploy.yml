@@ -6,7 +6,7 @@ on:
     paths:
       - "models/**"
       - "dbt_project.yml"
-      - "orchestration/dbt_task_config.json"
+      - "orchestration/**"
       - ".github/workflows/dbt-deploy.yml"
 
 jobs:
