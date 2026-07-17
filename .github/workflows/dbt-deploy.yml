@@ -49,6 +49,7 @@ jobs:
           snow connection add \
             --connection-name ci \
             --account "$SNOWFLAKE_ACCOUNT" \
+            --host "$SNOWFLAKE_ACCOUNT.snowflakecomputing.com" \
             --user "$SNOWFLAKE_USER" \
             --role "$SNOWFLAKE_ROLE" \
             --warehouse "$SNOWFLAKE_WAREHOUSE" \
