@@ -51,12 +51,12 @@ jobs:
             --warehouse "$SNOWFLAKE_WAREHOUSE" \
             --database "$SNOWFLAKE_DATABASE" \
             --schema "$SNOWFLAKE_SCHEMA" \
-            --authenticator SNOWFLAKE_JWT \
-            --private-key-file "${{ steps.keyfile.outputs.path }}" \
+            --private-key-path "${{ steps.keyfile.outputs.path }}" \
             --no-interactive
 
       - name: Deploy dbt project files to Snowflake
-        run: snow dbt deploy --connection ci
+        # Added the project name argument here
+        run: snow dbt deploy banking_analytics_platform_aws_snowflake --connection ci
 
       - name: Deploy task orchestration DAG
         run: |
