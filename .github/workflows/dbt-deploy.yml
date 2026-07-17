@@ -43,6 +43,9 @@ jobs:
 
       - name: Configure Snowflake CLI connection
         run: |
+          # Remove existing connection to prevent cache conflicts
+          snow connection remove ci || true
+          
           snow connection add \
             --connection-name ci \
             --account "$SNOWFLAKE_ACCOUNT" \
