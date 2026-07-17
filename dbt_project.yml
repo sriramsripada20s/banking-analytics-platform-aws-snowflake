@@ -19,11 +19,15 @@ models:
     +materialized: view
     staging:
       +schema: staging
+      +tags: ['staging']
     intermediate:
       +schema: intermediate
       +materialized: table
+      +tags: ['intermediate']
     core:
       +schema: core
+      +tags: ['core']
     marts:
       +schema: marts
       +materialized: table
+      +tags: ['marts']
