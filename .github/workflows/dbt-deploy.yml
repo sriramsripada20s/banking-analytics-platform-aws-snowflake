@@ -1,4 +1,4 @@
-name: Deploy dbt Pipeline to Snowflake
+name: Deploy dbt Pipeline to Snowflakee
 
 on:
   workflow_dispatch:
