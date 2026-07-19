@@ -4,3 +4,7 @@ End-to-end fintech data platform on AWS + Snowflake — multi-pattern ingestion 
 
 <img width="1346" height="905" alt="image" src="https://github.com/user-attachments/assets/b70d0d40-7f4f-4900-b14e-b30cef63a6d5" />
 
+
+<img width="1507" height="602" alt="image" src="https://github.com/user-attachments/assets/652ececd-9b12-4a72-8e35-fa0d3d0aeb8b" />
+
+
