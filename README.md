@@ -8,4 +8,16 @@ End-to-end fintech data platform on AWS + Snowflake — multi-pattern ingestion 
 # Airflow DAG Success Message on Slack
 <img width="1507" height="602" alt="image" src="https://github.com/user-attachments/assets/652ececd-9b12-4a72-8e35-fa0d3d0aeb8b" />
 
+# Airflow Pipeline Fail Scenario 
+<img width="1272" height="703" alt="image" src="https://github.com/user-attachments/assets/6970b8d8-eca1-41ba-ba0a-64371bab71fa" />
+
+
+# Airflow DAG Fail Message on Slack
+<img width="1237" height="576" alt="image" src="https://github.com/user-attachments/assets/6cccd813-c238-4a12-80d3-68e2d5666cbf" />
+
+
+
+
+
+
 
