@@ -1,7 +1,17 @@
-# banking-analytics-platform-aws-snowflake-dbt-airflow
-End-to-end fintech data platform on AWS + Snowflake — multi-pattern ingestion (batch, event-driven, API), dbt transformations, and Cortex AI-powered analytics, built to demonstrate production data engineering patterns from raw data to a governed semantic layer....
+# Fintech Analytics Platform
+This project demonstrates a production-grade data platform designed to ingest multi-pattern financial data, transform it into a governed semantic layer, and enable AI-driven insights using Snowflake Cortex.
 
+## 🏗️ Architecture Overview
 
+The platform follows a Medallion Architecture (Raw → Staging → Intermediate → Marts), decoupling ingestion from transformation to ensure scalability and reliability.
+
+**Cloud Infrastructure:** AWS S3 (Data Lake) → Snowflake (Warehouse).
+
+**Orchestration:** Airflow (DAGs) manages the end-to-end lifecycle.
+
+**Transformation:** dbt (Data Build Tool) enforces business logic, testing, and documentation.
+
+**Advanced Features:** Change Data Capture (CDC) via Snowflake Streams/Tasks, AI-powered document extraction (OCR), and real-time API integration.
 
 ## Ingestion Layer — FINTECH_PROD
 
