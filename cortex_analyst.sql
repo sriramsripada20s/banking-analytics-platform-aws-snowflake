@@ -1,3 +1,14 @@
+/* --------------------------------------------------------------------------------------------------------------------------------------------- 
+This defines the semantic layer that Cortex Analyst uses to translate natural language questions into SQL. The key components are:
+
+TABLES — maps logical names (CUSTOMERS, MERCHANTS, DAILY_KPIS) to physical mart tables
+FACTS — numeric/measurable columns
+DIMENSIONS — categorical/grouping columns
+METRICS — pre-defined aggregation expressions (SUM, AVG, COUNT)
+SYNONYMS — alternative names users can use in natural language queries
+--------------------------------------------------------------------------------------------------------------------------------------------------
+*/
+
 CREATE OR REPLACE SEMANTIC VIEW FINTECH_ANALYTICS_VIEW
   TABLES (
     CUSTOMERS AS FINTECH_PROD.MARTS.MART_CUSTOMER_360
