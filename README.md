@@ -81,20 +81,6 @@ S3 Bucket (fintech-project-sriram2026)
 
 **Total tests: 92 | All passing** 
 
-### Schema Routing Macro
-
-```sql
-{% macro generate_schema_name(custom_schema_name, node) -%}
-    {%- if custom_schema_name is none -%}
-        {{ target.schema }}
-    {%- else -%}
-        {{ custom_schema_name | trim }}
-    {%- endif -%}
-{%- endmacro %}
-```
-
-**Why it's needed:** dbt prepends the target schema as a prefix by default (e.g., `DEV_STAGING`). This override strips that prefix so models land in the exact schema specified in `dbt_project.yml` — `STAGING`, `INTERMEDIATE`, `MARTS` — regardless of the target profile.
-
 ### Staging Layer
 *Materialized as views in `FINTECH_PROD.STAGING`.*
 
@@ -161,6 +147,30 @@ S3 Bucket (fintech-project-sriram2026)
 | `MART_DAILY_TRANSACTION_KPI` | Settlements, Partner Transactions |
 | `MART_MERCHANT_PERFORMANCE` | Merchants, Settlements, Partner Transactions |
 
+## Orchestration Layer — Airflow + Astronomer Cosmos
+
+Cosmos parses the dbt project's `ref()` graph and creates one Airflow
+task per model, not one per layer. Independent models run in parallel.
+
+### Scheduling
+- Runs daily at 8am UTC (`0 8 * * *`)
+- No backfill (`catchup=False`)
+- Max 3 tasks run at once
+- DAG starts active, no manual unpause needed
+
+### Failure handling
+- Each task retries twice, 2 minutes apart
+- If it still fails: reads that task's log, extracts the specific dbt
+  error (which model, what kind of error), sends it to Slack, and logs
+  it to `PIPELINE_ERROR_LOG` in Snowflake
+- Slack and the DB write are independent — one failing doesn't block the other
+
+### Success/failure notifications
+- Two extra tasks watch **every** task in the DAG, not just the final layer
+- `notify_slack_success` — only fires if everything succeeded
+- `notify_slack_pipeline_failed` — fires if anything failed
+- Both are real tasks, not DAG-level callbacks (those didn't fire
+  reliably in this Airflow version)
 
 # Airflow DAG
 <img width="1346" height="905" alt="image" src="https://github.com/user-attachments/assets/b70d0d40-7f4f-4900-b14e-b30cef63a6d5" />
@@ -176,11 +186,6 @@ S3 Bucket (fintech-project-sriram2026)
 
 # Airflow DAG Fail Message on Slack
 <img width="1237" height="576" alt="image" src="https://github.com/user-attachments/assets/6cccd813-c238-4a12-80d3-68e2d5666cbf" />
-
-
-# Cortex Analyst 
-<img width="1772" height="857" alt="image" src="https://github.com/user-attachments/assets/9150274b-721e-4667-b1c5-71e5d3552ca3" />
-
 
 ## Cortex Agent — `FINTECH_ASSISTANT_AGENT`
 
@@ -198,6 +203,9 @@ interface, built via Snowflake CoCo.
 | `fintech_analytics` | Cortex Analyst (text-to-SQL) | `FINTECH_ANALYTICS_VIEW` semantic view | `CORTEX_WH` |
 | `policy_docs_search` | Cortex Search | `POLICY_DOCS_SEARCH` service | Service-managed |
 | `support_cases_search` | Cortex Search | `SUPPORT_CASES_SEARCH` service, filterable by category/priority/status | Service-managed |
+
+# Cortex Analyst 
+<img width="1772" height="857" alt="image" src="https://github.com/user-attachments/assets/9150274b-721e-4667-b1c5-71e5d3552ca3" />
 
 ### 2. Agent Configuration
 
