@@ -17,7 +17,7 @@ End-to-end fintech data platform on AWS + Snowflake — multi-pattern ingestion 
 <img width="1237" height="576" alt="image" src="https://github.com/user-attachments/assets/6cccd813-c238-4a12-80d3-68e2d5666cbf" />
 
 
-#Cortex Analyst 
+# Cortex Analyst 
 <img width="1772" height="857" alt="image" src="https://github.com/user-attachments/assets/9150274b-721e-4667-b1c5-71e5d3552ca3" />
 
 
