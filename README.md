@@ -76,6 +76,92 @@ S3 Bucket (fintech-project-sriram2026)
                                                           CORE.ACCOUNTS_CURRENT
 ```
 
+
+## Transformation Layer — FINTECH_PROD (dbt)
+
+**Total tests: 92 | All passing** 
+
+### Schema Routing Macro
+
+```sql
+{% macro generate_schema_name(custom_schema_name, node) -%}
+    {%- if custom_schema_name is none -%}
+        {{ target.schema }}
+    {%- else -%}
+        {{ custom_schema_name | trim }}
+    {%- endif -%}
+{%- endmacro %}
+```
+
+**Why it's needed:** dbt prepends the target schema as a prefix by default (e.g., `DEV_STAGING`). This override strips that prefix so models land in the exact schema specified in `dbt_project.yml` — `STAGING`, `INTERMEDIATE`, `MARTS` — regardless of the target profile.
+
+### Staging Layer
+*Materialized as views in `FINTECH_PROD.STAGING`.*
+
+| Model | Source | Business Logic | Rows | Tests |
+|---|---|---|---|---|
+| `stg_customers` | `RAW.CUSTOMERS_API_RAW` | Flatten JSON, dedup by `customer_id` (`ROW_NUMBER()` on `updated_at DESC`) | ~200,000 | unique, not_null, accepted_values |
+| `stg_accounts` | `RAW.ACCOUNTS_API_RAW` | Flatten JSON, dedup by `account_id` | ~287,118 | unique, not_null, accepted_values, relationships → `stg_customers` |
+| `stg_accounts_current` | `CORE.ACCOUNTS_CURRENT` | Pass-through of live state (Stream+Task pipeline, external to dbt) | 98 | unique, not_null, accepted_values |
+| `stg_merchants` | `RAW.MERCHANTS_API_RAW` | Flatten JSON, dedup by `merchant_id` | ~300 | unique, not_null, accepted_values |
+| `stg_settlements` | `RAW.SETTLEMENTS` | Typed column pass-through (already-structured CSV) | ~200,000 | unique, not_null, accepted_values, relationships → `stg_accounts`, `stg_merchants` |
+| `stg_partner_transactions` | `RAW.PARTNER_TRANSACTIONS` | Extract typed fields from VARIANT, no flattening needed | ~200,000 | unique, not_null, accepted_values, relationships → `stg_accounts`, `stg_merchants` |
+| `stg_support_cases` | `RAW.SUPPORT_CASES` | Extract typed fields from VARIANT | ~200,000 | unique, not_null, accepted_values, relationships → `stg_customers` |
+| `stg_exchange_rates` | `RAW.EXTERNAL_EXCHANGE_RATES` | Flatten nested rate object into one row per (base, quote, date) | variable | not_null |
+| `stg_account_activity` | `RAW.ACCOUNT_ACTIVITY` | Extract typed fields from VARIANT | ~2,100 | not_null, accepted_values, relationships → `stg_accounts` |
+
+### Intermediate Layer
+*Materialized as tables in `FINTECH_PROD.INTERMEDIATE`.*
+
+| Model | Sources | Business Logic | Rows | Tests |
+|---|---|---|---|---|
+| `int_transactions_unified` | `stg_settlements` + `stg_partner_transactions` | `UNION ALL` into one schema; derives `transaction_date`, `is_weekend`, `is_late_night`, `amount_bucket`, outcome flags | 400,000 | unique, not_null, accepted_values, relationships |
+| `int_accounts_enriched` | `stg_accounts` + `stg_accounts_current` | `LEFT JOIN` accounts to live state; `COALESCE` falls back to creation-time snapshot when no activity exists | 287,118 | Row-count guarded by singular test (below) |
+| `int_customer_activity_summary` | `stg_customers` + `int_accounts_enriched` + `int_transactions_unified` + `stg_support_cases` | `LEFT JOIN`s to account/transaction/support rollups; derives `engagement_segment` and `has_risk_flag` | 200,000 | unique, not_null, accepted_values |
+| `int_merchant_risk_summary` | `stg_merchants` + `int_transactions_unified` | `LEFT JOIN` to transaction aggregates; derives `decline_rate_pct`, `is_high_decline_merchant` (≥20 txns AND >15% decline rate) | 300 | unique, not_null, accepted_values |
+
+### Marts Layer
+*Materialized as tables in `FINTECH_PROD.MARTS`.*
+
+| Model | Source | Business Logic | Rows | Tests |
+|---|---|---|---|---|
+| `mart_customer_360` | `int_customer_activity_summary` | Pass-through — BI/Cortex Analyst interface for customer analytics | 200,000 | unique, not_null |
+| `mart_daily_transaction_kpi` | `int_transactions_unified` | `GROUP BY transaction_date`, daily volume/decline aggregates | 2 *(expected — synthetic data spans only 2 distinct dates)* | unique, not_null |
+| `mart_merchant_performance` | `int_merchant_risk_summary` | Pass-through — BI/Cortex Analyst interface for merchant risk | 300 | unique, not_null |
+
+### Singular (Custom) Tests
+
+| Test | Validates | Status |
+|---|---|---|
+| `assert_customer_summary_rowcount_matches_source` | `int_customer_activity_summary` row count = `stg_customers` row count — proves no customer dropped by `LEFT JOIN`s | PASS |
+| `assert_merchant_summary_rowcount_matches_source` | `int_merchant_risk_summary` row count = `stg_merchants` row count | PASS |
+
+### Source Freshness Monitoring
+
+| Source | Warn After | Error After |
+|---|---|---|
+| `RAW.PARTNER_TRANSACTIONS` | 12 hours | 48 hours |
+| `RAW.ACCOUNT_ACTIVITY` | 3 days | 7 days |
+
+### Design Tradeoffs
+
+| Topic | Decision |
+|---|---|
+| Deliberate `LEFT JOIN` pattern | Every intermediate model anchors on the entity table (customers/merchants/accounts), so zero-activity entities still appear — critical since these models exist to *identify* dormancy/inactivity, not hide it. Enforced by the singular tests above. |
+| Dedup logic | Reference entities (`stg_customers`/`stg_accounts`/`stg_merchants`) dedup via `ROW_NUMBER()`; event tables (settlements, partner transactions) never dedup — every row is a distinct real event. |
+| Label leakage avoided | `engagement_segment`/`has_risk_flag` are behavioral signals, not the ML label itself — the churn model consumes this table as features, never trains directly on a pre-baked label stored here. |
+| `CORE.ACCOUNTS_CURRENT` sourced externally | Maintained by the Stream+Task pipeline outside dbt; consumed via `source()`, never `ref()`, honestly reflecting that dbt doesn't own this table's freshness. |
+| High-decline threshold | Requires ≥20 transactions *and* >15% decline rate — prevents low-volume merchants from being falsely flagged on statistical noise. |
+
+### Lineage: Raw Sources → Marts
+
+| Mart | Ultimate Raw Sources |
+|---|---|
+| `MART_CUSTOMER_360` | Customers, Accounts, Accounts Current, Settlements, Partner Transactions, Support Cases |
+| `MART_DAILY_TRANSACTION_KPI` | Settlements, Partner Transactions |
+| `MART_MERCHANT_PERFORMANCE` | Merchants, Settlements, Partner Transactions |
+
+
 # Airflow DAG
 <img width="1346" height="905" alt="image" src="https://github.com/user-attachments/assets/b70d0d40-7f4f-4900-b14e-b30cef63a6d5" />
 
