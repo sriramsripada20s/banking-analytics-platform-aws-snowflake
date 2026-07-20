@@ -5,6 +5,8 @@ This project demonstrates a production-grade data platform designed to ingest mu
 
 The platform follows a Medallion Architecture (Raw → Staging → Intermediate → Marts), decoupling ingestion from transformation to ensure scalability and reliability.
 
+**Data Generation:** AWS EventBridge triggers Lambda functions on a schedule to simulate real-world data arrival (e.g. daily settlements, hourly partner transactions).
+
 **Cloud Infrastructure:** AWS S3 (Data Lake) → Snowflake (Warehouse).
 
 **Orchestration:** Airflow (DAGs) manages the end-to-end lifecycle.
@@ -14,6 +16,13 @@ The platform follows a Medallion Architecture (Raw → Staging → Intermediate 
 **Advanced Features:** Change Data Capture (CDC) via Snowflake Streams/Tasks, AI-powered document extraction (OCR), and real-time API integration.
 
 ## Ingestion Layer — FINTECH_PROD
+
+## 📥 Ingestion Strategy
+
+Data arrival is simulated by AWS Lambda functions, triggered on a
+schedule by EventBridge (e.g. settlements daily, partner transactions
+every 4 hours, account activity every 3 days) — this is what feeds
+files into S3 for Snowflake to pick up via the patterns below.
 
 ### Storage Integration
 
