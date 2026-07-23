@@ -1,4 +1,4 @@
-# Customer 360 & Cortex AI Analytics Platform (Snowflake, dbt, Airflow)
+# Fintech Customer 360 & Cortex AI Analytics Platform (AWS, Snowflake, dbt, Airflow)
 An enterprise-grade financial data platform that ingests batch and streaming financial workloads, enforces real-time governance and schema drift detection, transforms data using a dbt Medallion architecture, and surfaces natural-language analytics via Snowflake Cortex AI.
 
 [![dbt Core](https://img.shields.io/badge/dbt--core-1.8%2B-FF694A?style=flat&logo=dbt&logoColor=white)](https://www.getdbt.com/)
