@@ -1,264 +1,200 @@
-# Fintech Analytics Platform
-This project demonstrates a production-grade data platform designed to ingest multi-pattern financial data, transform it into a governed semantic layer, and enable AI-driven insights using Snowflake Cortex.
+# Fintech Analytics Platform & AI Intelligence Engine
+An enterprise-grade financial data platform that ingests batch and streaming financial workloads, enforces real-time governance and schema drift detection, transforms data using a dbt Medallion architecture, and surfaces natural-language analytics via Snowflake Cortex AI.
 
-## 🏗️ Architecture Overview
+[![dbt Core](https://img.shields.io/badge/dbt--core-1.8%2B-FF694A?style=flat&logo=dbt&logoColor=white)](https://www.getdbt.com/)
+[![Snowflake](https://img.shields.io/badge/Snowflake-Enterprise-29B5E8?style=flat&logo=snowflake&logoColor=white)](https://www.snowflake.com/)
+[![Apache Airflow](https://img.shields.io/badge/Apache%20Airflow-2.8%2B-017CEE?style=flat&logo=apacheairflow&logoColor=white)](https://airflow.apache.org/)
+[![Astronomer Cosmos](https://img.shields.io/badge/Astronomer-Cosmos-1C2B41?style=flat&logo=astronomer&logoColor=white)](https://astronomer.github.io/astronomer-cosmos/)
+[![AWS S3](https://img.shields.io/badge/AWS-S3-569A31?style=flat&logo=amazons3&logoColor=white)](https://aws.amazon.com/s3/)
+[![AWS Lambda](https://img.shields.io/badge/AWS-Lambda-FF9900?style=flat&logo=awslambda&logoColor=white)](https://aws.amazon.com/lambda/)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
+[![XGBoost](https://img.shields.io/badge/Snowpark%20ML-XGBoost-2B5B84?style=flat&logo=xgboost&logoColor=white)](https://xgboost.readthedocs.io/)
+[![Snowflake Cortex](https://img.shields.io/badge/Snowflake-Cortex%20AI-7B1FA2?style=flat&logo=snowflake&logoColor=white)](https://docs.snowflake.com/en/user-guide/cortex-overview)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Astro CLI](https://img.shields.io/badge/Astro%20CLI-Astronomer-FF5252?style=flat&logo=astronomer&logoColor=white)](https://www.astronomer.io/astro-cli/)
 
-The platform follows a Medallion Architecture (Raw → Staging → Intermediate → Marts), decoupling ingestion from transformation to ensure scalability and reliability.
+## Business Problem
+Fintech platforms process millions of financial events daily across disparate sources—including settlement feeds, partner transaction streams, account activity logs, and customer support tickets.
 
-**Data Generation:** AWS EventBridge triggers Lambda functions on a schedule to simulate real-world data arrival (e.g. daily settlements, hourly partner transactions).
+* **Fragmented Data & Schema Drift:** Inconsistent schemas and unexpected upstream contract changes frequently crash downstream jobs or corrupt reporting data.
+* **Reactive Risk Management:** Customer churn and fraud risks are typically discovered after financial loss occurs, rather than proactively flagged.
+* **Query Latency for Operations:** Business and risk teams rely heavily on data engineers to write custom SQL for daily operational questions and policy checks.
 
-**Cloud Infrastructure:** AWS S3 (Data Lake) → Snowflake (Warehouse).
+> **💡 Proposed Solution:** An automated financial data platform built using AWS, Snowflake, dbt, and Airflow that isolates schema drift at ingestion, models a unified Medallion layer for predictive ML churn scoring, and surfaces conversational analytics via Snowflake Cortex AI.
 
-**Orchestration:** Airflow (DAGs) manages the end-to-end lifecycle.
+## 📌 Architecture Overview 
+<IMG>
+Data flows from batch and streaming sources through AWS staging into Snowflake, where it undergoes automated validation, dbt Medallion transformations, Snowpark ML churn scoring, and Snowflake Cortex AI indexing.
 
-**Transformation:** dbt (Data Build Tool) enforces business logic, testing, and documentation.
+* **Data Sources:** Partner transaction streams (JSON), daily settlement files, account activity logs, support tickets, and PDF policy documents.
+* **Ingestion:** AWS Lambda, AWS S3, Snowflake Snowpipe (streaming), and atomic SQL stored procedures (batch).
+* **Storage (Data Lake & Landing):** AWS S3 staging buckets and persistent Snowflake landing tables.
+* **Processing / Transformation:** dbt Core (Staging $\rightarrow$ Intermediate $\rightarrow$ Marts) on Snowflake.
+* **Data Warehouse:** Snowflake Enterprise (FINTECH_PROD).
+* **Orchestration:** Apache Airflow with Astronomer Cosmos (DbtDag).
+* **Machine Learning & AI:** Snowpark ML (XGBoost Churn Classifier) and Snowflake Cortex AI (Cortex Analyst & Cortex Search Services)
 
-**Advanced Features:** Change Data Capture (CDC) via Snowflake Streams/Tasks, AI-powered document extraction (OCR), and real-time API integration.
+## 📂 Data Sources & Schema Overview
 
-## Ingestion Layer — FINTECH_PROD
+The platform ingests and processes six heterogeneous data streams across batch, streaming, and unstructured formats:
 
-## 📥 Ingestion Strategy
+| Data Stream | Type / Format | Granularity | Key Elements & Business Purpose |
+| :--- | :--- | :--- | :--- |
+| **Settlement Files** | Semi-structured (CSV) | Daily per merchant/batch | Settlement amounts, fees, reserve holds, and merchant bank payout accounts. |
+| **Partner Transactions** | Unstructured JSON | Real-time event level | Transaction UUIDs, payment methods, authorization codes, geolocation, and device fingerprints. |
+| **Support Cases** | Structured JSON | Daily updates | Ticket IDs, customer IDs, issue categories, resolution statuses, and agent notes. |
+| **Exchange Rates** | Structured CSV/API | Daily FX rates | Base currency, quote currency, spot rates, and bank reference timestamps. |
+| **Account Activity** | Semi-structured JSON | Event snapshot (3-day batch) | Account state changes, risk tier updates, login anomalies, and limit adjustments. |
+| **Policy Documents** | Unstructured PDF | Static reference | Compliance rules, regulatory requirements, fee schedules, and dispute resolution guidelines. |
 
-Data arrival is simulated by AWS Lambda functions, triggered on a
-schedule by EventBridge (e.g. settlements daily, partner transactions
-every 4 hours, account activity every 3 days) — this is what feeds
-files into S3 for Snowflake to pick up via the patterns below.
+## 📥 Ingestion & Data Governance Framework
 
-### Storage Integration
+The ingestion framework enforces strict quality guardrails tailored to each data stream type:
 
-| Property | Value |
-|---|---|
-| Name | `FINTECH_S3_INT` |
-| Type | External Stage (S3) |
-| Provider | AWS S3 |
-| IAM Role | `arn:aws:iam::<AWS_ACCOUNT_ID>:role/snowflake_fintech_role_new` |
-| Allowed Locations | `s3://fintech-project-sriram2026/` |
-| File Formats | `CSV_FORMAT` (header-skip CSV), `NDJSON_FORMAT` (newline-delimited JSON) |
+| Source | Ingestion Pattern | Cadence | Governance & Quality Enforcement |
+| :--- | :--- | :--- | :--- |
+| **Settlements** | Airflow $\rightarrow$ Lambda $\rightarrow$ S3 $\rightarrow$ `COPY INTO` | Daily batch (`generate_daily_sources_dag`) | Schema drift & null/duplicate validation via `load_and_validate_settlements.sql`. |
+| **Partner Transactions** | Airflow $\rightarrow$ Lambda $\rightarrow$ S3 $\rightarrow$ Snowpipe | Continuous stream (`generate_partner_transactions_dag`) | Dynamic Tables (`partner_transactions_clean_quarantine.sql`) isolate malformed records into `QUARANTINE`. |
+| **Support Cases** | Airflow $\rightarrow$ Lambda $\rightarrow$ S3 $\rightarrow$ `COPY INTO` | Daily batch (`generate_daily_sources_dag`) | Schema drift & key checks via `load_and_validate_support_cases.sql`. |
+| **Exchange Rates** | Airflow $\rightarrow$ Lambda $\rightarrow$ S3 $\rightarrow$ `COPY INTO` | Daily batch (`generate_daily_sources_dag`) | Key-set drift check against baseline snapshots via `load_and_validate_exchange_rates.sql`. |
+| **Account Activity** | Airflow $\rightarrow$ Lambda $\rightarrow$ S3 $\rightarrow$ `COPY INTO` | Every 3 days (`generate_account_activity_dag`) | Event payload flattening and key validation via `load_and_validate_account_activity.sql`. |
+| **Policy Documents** | S3 $\rightarrow$ `AI_PARSE_DOCUMENT` (OCR) | Static reference | Extracted text indexed for Cortex Search vector retrieval. |
 
-### Ingestion by Data Source
+### 🛡️ Dual Ingestion Governance Design
 
-| Source | RAW Table | Mechanism | Why This Pattern | Stage | File Format | Rows | Last Loaded |
-|---|---|---|---|---|---|---|---|
-| Settlements | `RAW.SETTLEMENTS` | Batch `COPY INTO` | Periodic CSV dumps from payment processor; no real-time need | `RAW.SETTLEMENTS_STAGE` (`/settlements/`) | `CSV_FORMAT` | 200,000 | 2026-07-16 09:05 |
-| Partner Transactions | `RAW.PARTNER_TRANSACTIONS` | Snowpipe (`AUTO_INGEST`) | Partner pushes NDJSON files continuously; event-driven keeps latency low | `RAW.PARTNER_TXN_STAGE` (`/partner_transactions/`) | `NDJSON_FORMAT` | 200,000 | 2026-07-16 09:11 |
-| Customers | `RAW.CUSTOMERS_API_RAW` | Batch `COPY INTO` | API snapshots exported as NDJSON; loaded on-demand | `RAW.CUSTOMERS_API_STAGE` (`/source_api/customers/`) | `NDJSON_FORMAT` | 1 (file) | 2026-07-14 13:14 |
-| Accounts | `RAW.ACCOUNTS_API_RAW` | Batch `COPY INTO` | Same API snapshot pattern as customers | `RAW.ACCOUNTS_API_STAGE` (`/source_api/accounts/`) | `NDJSON_FORMAT` | 1 (file) | 2026-07-14 13:14 |
-| Merchants | `RAW.MERCHANTS_API_RAW` | Batch `COPY INTO` | Same API snapshot pattern as customers | `RAW.MERCHANTS_API_STAGE` (`/source_api/merchants/`) | `NDJSON_FORMAT` | 1 (file) | 2026-07-14 13:14 |
-| Support Cases | `RAW.SUPPORT_CASES` | Batch `COPY INTO` | Historical case narratives as NDJSON; bulk-loaded once, updated periodically | `RAW.SUPPORT_CASES_STAGE` (`/documents/support_cases/`) | `NDJSON_FORMAT` | 200,000 | 2026-07-16 09:05 |
-| Policy Documents | `RAW.POLICY_DOCUMENTS` | `AI_PARSE_DOCUMENT` (OCR) | Unstructured PDFs require AI extraction; no tabular format exists | `RAW.POLICY_DOCS_STAGE` (`/documents/policies/`) + directory table | N/A (binary PDF) | 5 | 2026-07-14 14:03 |
-| Exchange Rates | `RAW.EXTERNAL_EXCHANGE_RATES` | Batch `COPY INTO` + live API procedure | S3 file for backfill; Python stored proc (`FETCH_EXCHANGE_RATES`) for live calls via External Access Integration | `RAW.EXCHANGE_RATE_STAGE` (`/external_api/exchange_rates/`) | `NDJSON_FORMAT` | 1 (file) | 2026-07-14 14:11 |
-| Account Activity | `RAW.ACCOUNT_ACTIVITY` | Snowpipe (`AUTO_INGEST`) → Stream → Task | Continuous balance/status updates need real-time capture and SCD-1 merge into CORE | `RAW.ACCOUNT_ACTIVITY_STAGE` (`/account_activity/`) | `NDJSON_FORMAT` | 2,100 | 2026-07-19 03:00 |
+* **Batch Ingestion (Imperative Guardrail):** Pre-RAW stored procedures load incoming files into persistent landing tables, check column schemas against `SCHEMA_SNAPSHOTS`, and verify key non-null/uniqueness constraints. Invalid payloads raise explicit SQL exceptions, immediately halting execution, logging errors to `INGESTION_AUDIT_LOG`, and sending automated Slack alerts with the root cause.
+* **Streaming Ingestion (Declarative Isolation):** Snowpipe continuously streams raw JSON payloads into `RAW.PARTNER_TRANSACTIONS`. Asynchronous Dynamic Tables automatically evaluate business completeness rules, routing valid records to `PARTNER_TRANSACTIONS_CLEAN` and corrupted payloads to `PARTNER_TRANSACTIONS_QUARANTINE` without interrupting stream ingestion. A daily sidecar task (`check_partner_transactions_health.sql`) runs `VALIDATE_PIPE_LOAD()` to audit for unparseable files skipped before row creation.
 
-### Stream + Task Pipeline (Account Activity CDC)
+## 🛠️ Data Transformation & Modeling (dbt Medallion Architecture)
 
-| Component | Detail |
-|---|---|
-| Stream | `RAW.ACCOUNT_ACTIVITY_STREAM` on `RAW.ACCOUNT_ACTIVITY` |
-| Stream Type | DELTA (default — captures INSERT, UPDATE, DELETE) |
-| What it tracks | All new rows inserted into `RAW.ACCOUNT_ACTIVITY` by Snowpipe |
-| Target table | `CORE.ACCOUNTS_CURRENT` (98 rows, last merged 2026-07-14 16:29) |
-| Task | `GOVERNANCE.MERGE_ACCOUNT_ACTIVITY_TASK` |
-| Schedule | `CRON 0 7 * * * UTC` (daily at 7:00 AM UTC) |
-| Trigger condition | `SYSTEM$STREAM_HAS_DATA(...)` — skips execution if no new data |
-| Operation | `MERGE` (upsert) keyed on `account_id` — updates existing accounts, inserts new ones |
-| Warehouse | `DBT_WH` |
-| State | STARTED (active) |
+The transformation pipeline follows a multi-tiered Medallion Architecture managed via dbt Core, enforcing data quality, lineage tracking, and strict business logic modularity across layers:
 
-### Pipes
+| Layer | Target Schema | Materialization | Description & Business Logic |
+| :--- | :--- | :--- | :--- |
+| **Bronze (Staging)** | `STAGING` | Views / Incremental | Casts data types, standardizes field naming conventions, flattens raw JSON payloads, and filters out deleted or quarantined records. |
+| **Silver (Intermediate)** | `INTERMEDIATE` | Ephemeral / Tables | Performs complex business logic, computes rolling customer metrics, aggregates daily merchant volume, and joins across core domain entities. |
+| **Gold (Marts)** | `MARTS` | Tables / Dynamic Tables | Exposes production-ready dimensional models (Star Schema) tailored for executive dashboards, operational BI, and upstream ML feature stores. |
 
-| Pipe | Schema | Target Table | Auto-Ingest | State |
-|---|---|---|---|---|
-| `PARTNER_TXN_PIPE` | `RAW` | `RAW.PARTNER_TRANSACTIONS` | Yes | Active |
-| `ACCOUNT_ACTIVITY_PIPE` | `RAW` | `RAW.ACCOUNT_ACTIVITY` | Yes | Active |
+### 🥉 Bronze Layer (Staging)
+* **`stg_settlements.sql`**: Normalizes daily merchant settlement files, converts currency metrics to standard bases, and generates audit hashes.
+* **`stg_partner_transactions.sql`**: Consumes from `PARTNER_TRANSACTIONS_CLEAN`, parses nested JSON event metadata, and standardizes ISO timestamp fields.
+* **`stg_support_cases.sql`**: Extracts support ticket details, calculates initial response SLAs, and categorizes issue tags.
+* **`stg_account_activity.sql`**: Computes point-in-time state changes for account risk status and login anomaly flags.
 
-Both pipes use a Snowflake-managed SQS queue, `NDJSON_FORMAT`, and `ON_ERROR = 'CONTINUE'`.
+### 🥈 Silver Layer (Intermediate)
+* **`int_customer_daily_summary.sql`**: Rollup model capturing 30/60/90-day rolling transaction volume, failure ratios, and support ticket frequency per customer.
+* **`int_merchant_risk_profile.sql`**: Joins settlement data with dispute records to monitor chargeback-to-volume ratios against regulatory thresholds.
+* **`int_exchange_rate_converter.sql`**: Applies daily FX spot rates to multi-currency partner transaction streams for standardized USD reporting.
 
-### Data Flow
+### 🥇 Gold Layer (Marts)
+* **`dim_customers.sql`**: Master customer dimension table including current risk tier, lifetime value (LTV), and churn probability outputs.
+* **`dim_merchants.sql`**: Consolidated merchant registry with onboarding metadata, settlement bank routing status, and risk flags.
+* **`fct_transactions.sql`**: Core transaction fact table modeled for fast sub-second querying across payment routing and approval metrics.
+* **`mart_customer_360.sql`**: Unified 360-degree view combining transaction history, support history, and risk scores designed specifically for consumption by **Snowflake Cortex AI** and **Sigma BI**.
+
+### 🧪 Data Testing & Quality Assurance
+* **Custom Data Assertions:** Custom dbt tests validate financial balances (e.g., ensuring `gross_amount = net_amount + fee_amount`) before promoting models to `MARTS`.
+
+## ⚙️ Orchestration (Airflow + Astronomer Cosmos)
+
+Data workflows are orchestrated end-to-end using Apache Airflow and Astronomer Cosmos (`fintech_dbt_pipeline_cosmos.py`):
+
+* **DAG Structure & Scheduling:** Airflow schedules and coordinates multi-step ingestion pipelines, running specialized DAGs (`generate_daily_sources_dag`, `generate_partner_transactions_dag`, and `generate_account_activity_dag`) to trigger AWS Lambda extractors and execute Snowflake pre-RAW validation procedures.
+* **Dynamic dbt Parsing (Astronomer Cosmos):** Cosmos reads the dbt `manifest.json` and automatically translates the dbt transformation DAG into native Airflow task groups (`DbtTaskGroup`). This allows each dbt model to run as an isolated Airflow task with full UI visibility and lineage tracking.
+* **Task-Level Parallelism:** Independent dbt models across staging, intermediate, and marts layers execute concurrently across Airflow workers. A failure in an upstream model halts only its direct downstream dependencies, allowing unrelated pipeline branches to finish successfully.
+* **Automated Failure Alerting:** Custom `on_failure_callback` hooks capture execution runtime errors, query logs, and model failures, instantly routing formatted payload alerts to Slack channels for quick debugging.
+* **Audit Logging:** Task exceptions automatically capture and write detailed error metadata to `FINTECH_PROD.GOVERNANCE.PIPELINE_ERROR_LOG` for auditing and SLA tracking.
+
+---
+
+### 📊 Pipeline Execution & Slack Observability
+
+#### Airflow DAG Graph View
+![Airflow DAG Architecture](https://github.com/user-attachments/assets/b70d0d40-7f4f-4900-b14e-b30cef63a6d5)
+
+#### Success Execution Flow & Automated Slack Notification
+| Airflow Success Execution | Slack Success Alert |
+| :---: | :---: |
+| ![Airflow Success](https://github.com/user-attachments/assets/4a8f8722-0e9f-4afd-bd81-afce7940b8c7) |!<img width="1507" height="602" alt="image" src="https://github.com/user-attachments/assets/652ececd-9b12-4a72-8e35-fa0d3d0aeb8b" />
+ |
+
+#### Failure Isolation & Automated Slack Alerting
+| Airflow Isolated Failure | Slack Failure Alert |
+| :---: | :---: |
+| ![Airflow Pipeline Failure](https://github.com/user-attachments/assets/6970b8d8-eca1-41ba-ba0a-64371bab71fa) | ![Slack Failure Message](https://github.com/user-attachments/assets/6cccd813-c238-4a12-80d3-68e2d5666cbf) |
+
+## 🧠 Machine Learning — Churn Prediction (Snowpark ML)
+
+Customer churn is predicted directly inside Snowflake using Snowpark ML (`churn_model.sql`):
+
+* **Model & Feature Engineering:** XGBoost classifier trained on `MART_CUSTOMER_360` using 14 customer behavioral features (e.g., 30-day transaction volume drop-off, support ticket frequency, failed charge ratios, and FX usage).
+* **Inference Pipeline:** Batch scoring runs on a scheduled basis via stored procedures (`SCORE_CHURN_MODEL()`), outputting probability scores and risk buckets directly to `CHURN_PREDICTIONS` for consumption by risk teams.
+
+---
+
+## 🤖 AI Layer & Natural Language Analytics (Snowflake Cortex)
+
+An integrated Snowflake Cortex Agent (`FINTECH_ASSISTANT_AGENT`) allows non-technical business stakeholders to query structured operational metrics and unstructured enterprise documentation using plain English.
+
+![Snowflake Cortex Agent Architecture](https://github.com/user-attachments/assets/728ed7cb-efc7-4a20-8b8f-a89a4e6a0110)
+
+---
+
+### 🛠️ Agent Tools & Services
+
+| Tool Name | Tool Type | Underlying Asset / Data Source | Warehouse / Compute |
+| :--- | :--- | :--- | :--- |
+| **`fintech_analytics`** | Cortex Analyst (Text-to-SQL) | `FINTECH_ANALYTICS_VIEW` (Semantic View) | `CORTEX_WH` |
+| **`policy_docs_search`** | Cortex Search (Vector Index) | `POLICY_DOCS_SEARCH` Service | Snowflake Managed |
+| **`support_cases_search`** | Cortex Search (Vector Index) | `SUPPORT_CASES_SEARCH` (Filterable by Category/Priority/Status) | Snowflake Managed |
+
+---
+
+### 💬 Conversational Interface in Action
+
+Below is an execution trace of **Cortex Analyst** dynamically generating SQL queries from natural language requests to analyze customer transaction metrics:
+
+![Cortex Analyst Interface](https://github.com/user-attachments/assets/9150274b-721e-4667-b1c5-71e5d3552ca3)
+
+## 🛠️ Tech Stack & Tools
+
+* **Languages:** Python 3.10+, SQL
+* **Cloud & Warehouse:** AWS (S3, Lambda), Snowflake Enterprise
+* **Transformation & ML:** dbt Core 1.8+, Snowpark ML (XGBoost)
+* **Orchestration:** Apache Airflow, Astronomer Cosmos
+* **AI & Search:** Snowflake Cortex Analyst, Snowflake Cortex Search
+
 
 ```
-S3 Bucket (fintech-project-sriram2026)
-│
-├── /settlements/                  → Batch COPY → RAW.SETTLEMENTS
-├── /partner_transactions/         → S3 Event → SQS → Snowpipe → RAW.PARTNER_TRANSACTIONS
-├── /source_api/customers/         → Batch COPY → RAW.CUSTOMERS_API_RAW
-├── /source_api/accounts/          → Batch COPY → RAW.ACCOUNTS_API_RAW
-├── /source_api/merchants/         → Batch COPY → RAW.MERCHANTS_API_RAW
-├── /documents/support_cases/      → Batch COPY → RAW.SUPPORT_CASES
-├── /documents/policies/           → AI_PARSE_DOCUMENT (OCR) → RAW.POLICY_DOCUMENTS
-├── /external_api/exchange_rates/  → Batch COPY → RAW.EXTERNAL_EXCHANGE_RATES
-└── /account_activity/             → S3 Event → SQS → Snowpipe → RAW.ACCOUNT_ACTIVITY
-                                                                        │
-                                                              Stream (CDC capture)
-                                                                        │
-                                                              Task (daily MERGE)
-                                                                        ▼
-                                                          CORE.ACCOUNTS_CURRENT
-```
 
+## 📁 Repository Structure
 
-## Transformation Layer — FINTECH_PROD (dbt)
-
-**Total tests: 92 | All passing** 
-
-### Staging Layer
-*Materialized as views in `FINTECH_PROD.STAGING`.*
-
-| Model | Source | Business Logic | Rows | Tests |
-|---|---|---|---|---|
-| `stg_customers` | `RAW.CUSTOMERS_API_RAW` | Flatten JSON, dedup by `customer_id` (`ROW_NUMBER()` on `updated_at DESC`) | ~200,000 | unique, not_null, accepted_values |
-| `stg_accounts` | `RAW.ACCOUNTS_API_RAW` | Flatten JSON, dedup by `account_id` | ~287,118 | unique, not_null, accepted_values, relationships → `stg_customers` |
-| `stg_accounts_current` | `CORE.ACCOUNTS_CURRENT` | Pass-through of live state (Stream+Task pipeline, external to dbt) | 98 | unique, not_null, accepted_values |
-| `stg_merchants` | `RAW.MERCHANTS_API_RAW` | Flatten JSON, dedup by `merchant_id` | ~300 | unique, not_null, accepted_values |
-| `stg_settlements` | `RAW.SETTLEMENTS` | Typed column pass-through (already-structured CSV) | ~200,000 | unique, not_null, accepted_values, relationships → `stg_accounts`, `stg_merchants` |
-| `stg_partner_transactions` | `RAW.PARTNER_TRANSACTIONS` | Extract typed fields from VARIANT, no flattening needed | ~200,000 | unique, not_null, accepted_values, relationships → `stg_accounts`, `stg_merchants` |
-| `stg_support_cases` | `RAW.SUPPORT_CASES` | Extract typed fields from VARIANT | ~200,000 | unique, not_null, accepted_values, relationships → `stg_customers` |
-| `stg_exchange_rates` | `RAW.EXTERNAL_EXCHANGE_RATES` | Flatten nested rate object into one row per (base, quote, date) | variable | not_null |
-| `stg_account_activity` | `RAW.ACCOUNT_ACTIVITY` | Extract typed fields from VARIANT | ~2,100 | not_null, accepted_values, relationships → `stg_accounts` |
-
-### Intermediate Layer
-*Materialized as tables in `FINTECH_PROD.INTERMEDIATE`.*
-
-| Model | Sources | Business Logic | Rows | Tests |
-|---|---|---|---|---|
-| `int_transactions_unified` | `stg_settlements` + `stg_partner_transactions` | `UNION ALL` into one schema; derives `transaction_date`, `is_weekend`, `is_late_night`, `amount_bucket`, outcome flags | 400,000 | unique, not_null, accepted_values, relationships |
-| `int_accounts_enriched` | `stg_accounts` + `stg_accounts_current` | `LEFT JOIN` accounts to live state; `COALESCE` falls back to creation-time snapshot when no activity exists | 287,118 | Row-count guarded by singular test (below) |
-| `int_customer_activity_summary` | `stg_customers` + `int_accounts_enriched` + `int_transactions_unified` + `stg_support_cases` | `LEFT JOIN`s to account/transaction/support rollups; derives `engagement_segment` and `has_risk_flag` | 200,000 | unique, not_null, accepted_values |
-| `int_merchant_risk_summary` | `stg_merchants` + `int_transactions_unified` | `LEFT JOIN` to transaction aggregates; derives `decline_rate_pct`, `is_high_decline_merchant` (≥20 txns AND >15% decline rate) | 300 | unique, not_null, accepted_values |
-
-### Marts Layer
-*Materialized as tables in `FINTECH_PROD.MARTS`.*
-
-| Model | Source | Business Logic | Rows | Tests |
-|---|---|---|---|---|
-| `mart_customer_360` | `int_customer_activity_summary` | Pass-through — BI/Cortex Analyst interface for customer analytics | 200,000 | unique, not_null |
-| `mart_daily_transaction_kpi` | `int_transactions_unified` | `GROUP BY transaction_date`, daily volume/decline aggregates | 2 *(expected — synthetic data spans only 2 distinct dates)* | unique, not_null |
-| `mart_merchant_performance` | `int_merchant_risk_summary` | Pass-through — BI/Cortex Analyst interface for merchant risk | 300 | unique, not_null |
-
-### Singular (Custom) Tests
-
-| Test | Validates | Status |
-|---|---|---|
-| `assert_customer_summary_rowcount_matches_source` | `int_customer_activity_summary` row count = `stg_customers` row count — proves no customer dropped by `LEFT JOIN`s | PASS |
-| `assert_merchant_summary_rowcount_matches_source` | `int_merchant_risk_summary` row count = `stg_merchants` row count | PASS |
-
-### Source Freshness Monitoring
-
-| Source | Warn After | Error After |
-|---|---|---|
-| `RAW.PARTNER_TRANSACTIONS` | 12 hours | 48 hours |
-| `RAW.ACCOUNT_ACTIVITY` | 3 days | 7 days |
-
-### Design Tradeoffs
-
-| Topic | Decision |
-|---|---|
-| Deliberate `LEFT JOIN` pattern | Every intermediate model anchors on the entity table (customers/merchants/accounts), so zero-activity entities still appear — critical since these models exist to *identify* dormancy/inactivity, not hide it. Enforced by the singular tests above. |
-| Dedup logic | Reference entities (`stg_customers`/`stg_accounts`/`stg_merchants`) dedup via `ROW_NUMBER()`; event tables (settlements, partner transactions) never dedup — every row is a distinct real event. |
-| Label leakage avoided | `engagement_segment`/`has_risk_flag` are behavioral signals, not the ML label itself — the churn model consumes this table as features, never trains directly on a pre-baked label stored here. |
-| `CORE.ACCOUNTS_CURRENT` sourced externally | Maintained by the Stream+Task pipeline outside dbt; consumed via `source()`, never `ref()`, honestly reflecting that dbt doesn't own this table's freshness. |
-| High-decline threshold | Requires ≥20 transactions *and* >15% decline rate — prevents low-volume merchants from being falsely flagged on statistical noise. |
-
-### Lineage: Raw Sources → Marts
-
-| Mart | Ultimate Raw Sources |
-|---|---|
-| `MART_CUSTOMER_360` | Customers, Accounts, Accounts Current, Settlements, Partner Transactions, Support Cases |
-| `MART_DAILY_TRANSACTION_KPI` | Settlements, Partner Transactions |
-| `MART_MERCHANT_PERFORMANCE` | Merchants, Settlements, Partner Transactions |
-
-## Orchestration Layer — Airflow + Astronomer Cosmos
-
-Cosmos parses the dbt project's `ref()` graph and creates one Airflow
-task per model, not one per layer. Independent models run in parallel.
-
-### Scheduling
-- Runs daily at 8am UTC (`0 8 * * *`)
-- No backfill (`catchup=False`)
-- Max 3 tasks run at once
-- DAG starts active, no manual unpause needed
-
-### Failure handling
-- Each task retries twice, 2 minutes apart
-- If it still fails: reads that task's log, extracts the specific dbt
-  error (which model, what kind of error), sends it to Slack, and logs
-  it to `PIPELINE_ERROR_LOG` in Snowflake
-- Slack and the DB write are independent — one failing doesn't block the other
-
-### Success/failure notifications
-- Two extra tasks watch **every** task in the DAG, not just the final layer
-- `notify_slack_success` — only fires if everything succeeded
-- `notify_slack_pipeline_failed` — fires if anything failed
-- Both are real tasks, not DAG-level callbacks (those didn't fire
-  reliably in this Airflow version)
-
-# Airflow DAG
-<img width="1346" height="905" alt="image" src="https://github.com/user-attachments/assets/b70d0d40-7f4f-4900-b14e-b30cef63a6d5" />
-
-# Airflow DAG Success Scenario
-<img width="1225" height="476" alt="image" src="https://github.com/user-attachments/assets/4a8f8722-0e9f-4afd-bd81-afce7940b8c7" />
-
-# Airflow DAG Success Message on Slack
-<img width="1507" height="602" alt="image" src="https://github.com/user-attachments/assets/652ececd-9b12-4a72-8e35-fa0d3d0aeb8b" />
-
-# Airflow Pipeline Fail Scenario 
-<img width="1272" height="703" alt="image" src="https://github.com/user-attachments/assets/6970b8d8-eca1-41ba-ba0a-64371bab71fa" />
-
-# Airflow DAG Fail Message on Slack
-<img width="1237" height="576" alt="image" src="https://github.com/user-attachments/assets/6cccd813-c238-4a12-80d3-68e2d5666cbf" />
-
-## Cortex Agent — `FINTECH_ASSISTANT_AGENT`
-
-An orchestrated AI agent combining structured (Cortex Analyst) and
-unstructured (Cortex Search) data access into a single conversational
-interface, built via Snowflake CoCo.
-
-<img width="1102" height="471" alt="image" src="https://github.com/user-attachments/assets/728ed7cb-efc7-4a20-8b8f-a89a4e6a0110" />
-
-
-### 1. Tools Wired to the Agent
-
-| Tool | Type | Backed By | Warehouse |
-|---|---|---|---|
-| `fintech_analytics` | Cortex Analyst (text-to-SQL) | `FINTECH_ANALYTICS_VIEW` semantic view | `CORTEX_WH` |
-| `policy_docs_search` | Cortex Search | `POLICY_DOCS_SEARCH` service | Service-managed |
-| `support_cases_search` | Cortex Search | `SUPPORT_CASES_SEARCH` service, filterable by category/priority/status | Service-managed |
-
-# Cortex Analyst 
-<img width="1772" height="857" alt="image" src="https://github.com/user-attachments/assets/9150274b-721e-4667-b1c5-71e5d3552ca3" />
-
-### 2. Agent Configuration
-
-- **Audience**: Internal operations team
-- **Tone**: Concise & technical — data-first, tables over prose, no filler
-- **Routing logic**: Quantitative questions → Cortex Analyst; policy/compliance questions → policy search; incident/complaint history → support case search; multi-domain questions → calls tools in sequence and synthesizes a combined answer
-
-### 3. Evaluation Dataset
-
-- **Methodology**: Ground truth built by directly querying the underlying marts and document corpus — independent of the agent's own output, so the evaluation can actually catch agent mistakes rather than validate them
-- **30 test questions**, covering:
-  - 8 pure Cortex Analyst questions
-  - 4 pure policy search questions
-  - 4 pure support case search questions
-  - 4 multi-tool questions (requiring correct orchestration across tools)
-  - 5 core answer-correctness checks
-  - 2 edge cases (out-of-scope handling, refusal behavior)
-  - 3 instruction-compliance checks (tone/format adherence)
-- **Metrics evaluated**: tool selection accuracy, tool execution accuracy, answer correctness, logical consistency
-
-### 4. Status
-
-Agent built, published (v2), and fully wired to all three tools.
-Evaluation dataset and config built and deployed. **Evaluation
-execution itself is currently blocked** — the underlying
-`DATA_AGENT_RUN` API required to invoke the agent programmatically is
-restricted on Snowflake trial accounts. All infrastructure is ready to
-run immediately once the account is upgraded from trial.
-
-
-
-
-
-
-
-
-
+```plaintext
+.
+├── dbt/                                    # dbt project root
+│   ├── models/
+│   │   ├── staging/                        # Staging models & live state logic
+│   │   ├── intermediate/                   # Business logic & metric rollups
+│   │   └── marts/                          # Production marts (Customer 360, KPIs)
+│   ├── dbt_project.yml
+│   └── packages.yml
+├── infrastructure_and_ingestion/          # Snowflake setup & ingestion stored procedures
+│   ├── 01_databaseschema_creation.sql      # DB, Schema, and Table DDL
+│   ├── load_and_validate_settlements.sql   # Batch validation stored procedure
+│   ├── partner_transactions_clean_quarantine.sql # Dynamic tables for streaming isolation
+│   └── check_partner_transactions_health.sql     # Streaming pipe health check task
+├── orchestration/                          # Airflow workflows
+│   └── airflow-cosmos/
+│       ├── dags/
+│       │   ├── fintech_dbt_pipeline_cosmos.py # Cosmos dbt DAG execution
+│       │   ├── generate_daily_sources_dag.py  # Daily batch ingestion DAG
+│       │   └── generate_partner_transactions_dag.py # Streaming DAG
+│       ├── churn_model.sql                 # Snowpark ML training/scoring SQL
+│       ├── setup.ps1                       # Local sync setup script
+│       └── Dockerfile
+├── snowflake/
+│   └── cortex/                             # AI & Semantic Layer DDLs
+│       ├── cortex_analyst.sql              # Cortex Analyst semantic view DDL
+│       ├── cortex_search_policydocs.sql    # Policy vector search DDL
+│       └── cortex_search_supportcases.sql  # Support ticket vector search DDL
+└── README.md
