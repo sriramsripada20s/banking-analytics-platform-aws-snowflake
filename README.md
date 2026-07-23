@@ -198,3 +198,63 @@ Below is an execution trace of **Cortex Analyst** dynamically generating SQL que
 │       ├── cortex_search_policydocs.sql    # Policy vector search DDL
 │       └── cortex_search_supportcases.sql  # Support ticket vector search DDL
 └── README.md
+
+## 🚀 Getting Started
+
+### 📋 Prerequisites
+
+Before running the platform, ensure you have the following installed and configured:
+
+- Docker Desktop & Astro CLI (required for local Airflow execution)
+- Python 3.10+ (local runtime environment)
+- Snowflake Account (Enterprise Edition with Cortex AI features enabled)
+- AWS CLI (configured with read/write access to your staging S3 buckets)
+
+### 💻 Local Installation & Setup
+
+### Step 1 — Clone the repository
+
+```bash
+git clone https://github.com/sriramsripada20s/banking-analytics-platform-aws-snowflake.git
+cd banking-analytics-platform-aws-snowflake
+```
+
+### Step 2 — Set up the Python environment
+
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r orchestration/airflow-cosmos/requirements.txt
+```
+
+### Step 3 — Provision Snowflake resources and governance
+
+Run the following SQL scripts in Snowsight (or via SnowSQL), in order:
+
+1. **Database & schema creation** — `infrastructure_and_ingestion/01_databaseschema_creation.sql`
+2. **Batch validation procedures & streaming isolation tables**:
+   - `infrastructure_and_ingestion/load_and_validate_settlements.sql`
+   - `infrastructure_and_ingestion/partner_transactions_clean_quarantine.sql`
+   - `infrastructure_and_ingestion/check_partner_transactions_health.sql`
+3. **Cortex AI & search services**:
+   - `snowflake/cortex/cortex_analyst.sql`
+   - `snowflake/cortex/cortex_search_policydocs.sql`
+   - `snowflake/cortex/cortex_search_supportcases.sql`
+
+### Step 4 — Launch the Airflow environment
+
+```bash
+cd orchestration/airflow-cosmos
+astro dev start
+```
+
+Access the Airflow UI at `http://localhost:8080` (default login: `admin` / `admin`).
+
+### Step 5 — Run dbt transformations directly (optional, outside Airflow)
+
+```bash
+cd ../../dbt
+dbt deps
+dbt run
+dbt test
+```
