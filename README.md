@@ -23,8 +23,9 @@ Fintech platforms process millions of financial events daily across disparate so
 > **💡 Proposed Solution:** An automated financial data platform built using AWS, Snowflake, dbt, and Airflow that isolates schema drift at ingestion, models a unified Medallion layer for predictive ML churn scoring, and surfaces conversational analytics via Snowflake Cortex AI.
 
 ## 📌 Architecture Overview 
-<IMG>
 Data flows from batch and streaming sources through AWS staging into Snowflake, where it undergoes automated validation, dbt Medallion transformations, Snowpark ML churn scoring, and Snowflake Cortex AI indexing.
+
+<img width="1151" height="562" alt="image" src="https://github.com/user-attachments/assets/7de36013-b61d-4074-9b32-7b293e86f27d" />
 
 * **Data Sources:** Partner transaction streams (JSON), daily settlement files, account activity logs, support tickets, and PDF policy documents.
 * **Ingestion:** AWS Lambda, AWS S3, Snowflake Snowpipe (streaming), and atomic SQL stored procedures (batch).
