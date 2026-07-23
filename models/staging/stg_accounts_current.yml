@@ -3,10 +3,10 @@ version: 2
 models:
   - name: stg_accounts_current
     description: >
-      Live account state, sourced from CORE.ACCOUNTS_CURRENT — maintained
-      OUTSIDE dbt by the Stream+Task MERGE pipeline (see account_activity
-      ingestion). This is the authoritative source for current
-      status/balance; stg_accounts only has creation-time snapshots.
+      Live account state, derived directly from the raw account_activity
+      event log (ROW_NUMBER, latest updated_at wins). The earlier
+      Stream+Task CDC pipeline into CORE.ACCOUNTS_CURRENT was retired;
+      this model now computes "current state" itself on every dbt run.
     columns:
       - name: account_id
         description: Primary key
